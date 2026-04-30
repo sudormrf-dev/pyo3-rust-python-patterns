@@ -11,7 +11,6 @@ from __future__ import annotations
 import sys
 import textwrap
 from pathlib import Path
-from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -28,87 +27,112 @@ from patterns.type_mapping import (
 # Extended registry with complex / generic types
 # ---------------------------------------------------------------------------
 
+
 def build_extended_registry() -> TypeMappingRegistry:
     """Return a registry enriched with generic and container type mappings."""
     registry = TypeMappingRegistry()
 
     # Zero-copy byte slice – the most important performance mapping
-    registry.register(TypeMapping(
-        rust_type="&[u8]",
-        python_type=PyO3Type.BYTES,
-        notes="Zero-copy via PyBytes::from_data; no allocation on the Rust side.",
-        zero_copy=True,
-    ))
+    registry.register(
+        TypeMapping(
+            rust_type="&[u8]",
+            python_type=PyO3Type.BYTES,
+            notes="Zero-copy via PyBytes::from_data; no allocation on the Rust side.",
+            zero_copy=True,
+        )
+    )
 
     # Owned string – always clones
-    registry.register(TypeMapping(
-        rust_type="String",
-        python_type=PyO3Type.STR,
-        notes="Rust owns the UTF-8 string; PyO3 copies into a Python str object.",
-        requires_clone=True,
-    ))
+    registry.register(
+        TypeMapping(
+            rust_type="String",
+            python_type=PyO3Type.STR,
+            notes="Rust owns the UTF-8 string; PyO3 copies into a Python str object.",
+            requires_clone=True,
+        )
+    )
 
     # Option<T> → Optional[T] (represented as PyO3Type.ANY here; annotated separately)
-    registry.register(TypeMapping(
-        rust_type="Option<String>",
-        python_type=PyO3Type.STR,
-        notes="Option::None → Python None; Option::Some(s) → str.",
-    ))
-    registry.register(TypeMapping(
-        rust_type="Option<i64>",
-        python_type=PyO3Type.INT,
-        notes="Option::None → Python None; Option::Some(n) → int.",
-    ))
-    registry.register(TypeMapping(
-        rust_type="Option<f64>",
-        python_type=PyO3Type.FLOAT,
-        notes="Option::None → Python None; Option::Some(f) → float.",
-    ))
+    registry.register(
+        TypeMapping(
+            rust_type="Option<String>",
+            python_type=PyO3Type.STR,
+            notes="Option::None → Python None; Option::Some(s) → str.",
+        )
+    )
+    registry.register(
+        TypeMapping(
+            rust_type="Option<i64>",
+            python_type=PyO3Type.INT,
+            notes="Option::None → Python None; Option::Some(n) → int.",
+        )
+    )
+    registry.register(
+        TypeMapping(
+            rust_type="Option<f64>",
+            python_type=PyO3Type.FLOAT,
+            notes="Option::None → Python None; Option::Some(f) → float.",
+        )
+    )
 
     # Vec<T> → list
-    registry.register(TypeMapping(
-        rust_type="Vec<String>",
-        python_type=PyO3Type.LIST,
-        notes="Each String cloned into a Python str; full allocation per element.",
-        requires_clone=True,
-    ))
-    registry.register(TypeMapping(
-        rust_type="Vec<i64>",
-        python_type=PyO3Type.LIST,
-        notes="Vec<i64> converted element-by-element to a Python list[int].",
-    ))
-    registry.register(TypeMapping(
-        rust_type="Vec<f64>",
-        python_type=PyO3Type.LIST,
-        notes="Consider numpy.ndarray for large float buffers to avoid per-element overhead.",
-    ))
+    registry.register(
+        TypeMapping(
+            rust_type="Vec<String>",
+            python_type=PyO3Type.LIST,
+            notes="Each String cloned into a Python str; full allocation per element.",
+            requires_clone=True,
+        )
+    )
+    registry.register(
+        TypeMapping(
+            rust_type="Vec<i64>",
+            python_type=PyO3Type.LIST,
+            notes="Vec<i64> converted element-by-element to a Python list[int].",
+        )
+    )
+    registry.register(
+        TypeMapping(
+            rust_type="Vec<f64>",
+            python_type=PyO3Type.LIST,
+            notes="Consider numpy.ndarray for large float buffers to avoid per-element overhead.",
+        )
+    )
 
     # HashMap<K, V> → dict
-    registry.register(TypeMapping(
-        rust_type="HashMap<String, String>",
-        python_type=PyO3Type.DICT,
-        notes="All keys/values cloned; O(n) allocation.",
-        requires_clone=True,
-    ))
-    registry.register(TypeMapping(
-        rust_type="HashMap<String, i64>",
-        python_type=PyO3Type.DICT,
-        notes="Keys cloned, integer values converted cheaply.",
-        requires_clone=True,
-    ))
+    registry.register(
+        TypeMapping(
+            rust_type="HashMap<String, String>",
+            python_type=PyO3Type.DICT,
+            notes="All keys/values cloned; O(n) allocation.",
+            requires_clone=True,
+        )
+    )
+    registry.register(
+        TypeMapping(
+            rust_type="HashMap<String, i64>",
+            python_type=PyO3Type.DICT,
+            notes="Keys cloned, integer values converted cheaply.",
+            requires_clone=True,
+        )
+    )
 
     # Tuples
-    registry.register(TypeMapping(
-        rust_type="(i64, f64)",
-        python_type=PyO3Type.TUPLE,
-        notes="Fixed-arity Rust tuple → Python tuple via IntoPy.",
-    ))
-    registry.register(TypeMapping(
-        rust_type="(String, String, i32)",
-        python_type=PyO3Type.TUPLE,
-        notes="Mixed-type tuple; each element individually converted.",
-        requires_clone=True,
-    ))
+    registry.register(
+        TypeMapping(
+            rust_type="(i64, f64)",
+            python_type=PyO3Type.TUPLE,
+            notes="Fixed-arity Rust tuple → Python tuple via IntoPy.",
+        )
+    )
+    registry.register(
+        TypeMapping(
+            rust_type="(String, String, i32)",
+            python_type=PyO3Type.TUPLE,
+            notes="Mixed-type tuple; each element individually converted.",
+            requires_clone=True,
+        )
+    )
 
     return registry
 
@@ -117,11 +141,12 @@ def build_extended_registry() -> TypeMappingRegistry:
 # Rust stub generators
 # ---------------------------------------------------------------------------
 
+
 def _option_stub(inner_rust: str, inner_py: str) -> str:
     """Generate a Rust helper that extracts Option<T> into PyResult."""
     return textwrap.dedent(f"""\
         // Option<{inner_rust}> → Optional[{inner_py}]
-        pub fn extract_option_{inner_rust.lower().replace('<', '_').replace('>', '')}(
+        pub fn extract_option_{inner_rust.lower().replace("<", "_").replace(">", "")}(
             ob: &Bound<'_, PyAny>,
         ) -> PyResult<Option<{inner_rust}>> {{
             if ob.is_none() {{
@@ -171,11 +196,11 @@ def _union_stub(variants: list[tuple[str, str]]) -> str:
     """Generate a Rust helper using an enum to model Union[A, B, ...]."""
     variant_lines = "\n".join(f"    {py}({rust})," for rust, py in variants)
     match_arms = "\n".join(
-        f'        if let Ok(v) = ob.extract::<{rust}>() {{ return Ok(MyUnion::{py}(v)); }}'
+        f"        if let Ok(v) = ob.extract::<{rust}>() {{ return Ok(MyUnion::{py}(v)); }}"
         for rust, py in variants
     )
     return textwrap.dedent(f"""\
-        // Union[{', '.join(py for _, py in variants)}]
+        // Union[{", ".join(py for _, py in variants)}]
         pub enum MyUnion {{
         {variant_lines}
         }}
@@ -191,12 +216,13 @@ def _union_stub(variants: list[tuple[str, str]]) -> str:
 # Demonstration helpers
 # ---------------------------------------------------------------------------
 
+
 def demo_primitives(registry: TypeMappingRegistry) -> None:
     """Print a table of all primitive Rust → Python mappings."""
     print("Primitive type mappings")
     print("-" * 52)
     print(f"  {'Rust type':<20} {'Python type':<12} Cost")
-    print(f"  {'-'*20} {'-'*12} ------")
+    print(f"  {'-' * 20} {'-' * 12} ------")
     for primitive in RustPrimitive:
         py_type = rust_type_to_python(primitive)
         mapping = registry.get(primitive.value)
@@ -208,21 +234,29 @@ def demo_primitives(registry: TypeMappingRegistry) -> None:
 def demo_complex_cases(registry: TypeMappingRegistry) -> None:
     """Print analysis of the difficult generic/container types."""
     complex_keys = [
-        "Option<String>", "Option<i64>", "Option<f64>",
-        "Vec<String>", "Vec<i64>", "Vec<f64>",
-        "HashMap<String, String>", "HashMap<String, i64>",
-        "(i64, f64)", "(String, String, i32)",
+        "Option<String>",
+        "Option<i64>",
+        "Option<f64>",
+        "Vec<String>",
+        "Vec<i64>",
+        "Vec<f64>",
+        "HashMap<String, String>",
+        "HashMap<String, i64>",
+        "(i64, f64)",
+        "(String, String, i32)",
     ]
 
     print("Complex / generic type mappings")
     print("-" * 72)
     print(f"  {'Rust type':<32} {'Python type':<10} {'Cost':<12} Notes")
-    print(f"  {'-'*32} {'-'*10} {'-'*12} -----")
+    print(f"  {'-' * 32} {'-' * 10} {'-' * 12} -----")
     for key in complex_keys:
         m = registry.get(key)
         if m:
             short_notes = m.notes[:38] + "…" if len(m.notes) > 38 else m.notes
-            print(f"  {m.rust_type:<32} {m.python_type.value:<10} {m.conversion_cost():<12} {short_notes}")
+            print(
+                f"  {m.rust_type:<32} {m.python_type.value:<10} {m.conversion_cost():<12} {short_notes}"
+            )
     print()
 
 
@@ -278,6 +312,7 @@ def demo_registry_stats(registry: TypeMappingRegistry) -> None:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     """Run all type-mapping demonstrations."""

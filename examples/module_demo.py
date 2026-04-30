@@ -31,6 +31,7 @@ from patterns.type_mapping import PyO3Type
 # Pattern 1 – plain free function
 # ---------------------------------------------------------------------------
 
+
 def make_sum_function() -> PyO3Function:
     """Return a FunctionSpec for a simple sum-of-list function."""
     fn = PyO3Function(
@@ -46,6 +47,7 @@ def make_sum_function() -> PyO3Function:
 # ---------------------------------------------------------------------------
 # Pattern 2 – class (#[pyclass])
 # ---------------------------------------------------------------------------
+
 
 def make_matrix_class() -> PyO3Class:
     """Return a ClassSpec for a 2-D matrix backed by a Rust Vec<f64>."""
@@ -64,7 +66,9 @@ def make_matrix_class() -> PyO3Class:
     dot_fn = PyO3Function(name="dot", return_type=PyO3Type.ANY, releases_gil=True)
     dot_fn.add_param("other", PyO3Type.ANY)
 
-    transpose_fn = PyO3Function(name="transpose", return_type=PyO3Type.ANY, releases_gil=True)
+    transpose_fn = PyO3Function(
+        name="transpose", return_type=PyO3Type.ANY, releases_gil=True
+    )
 
     cls.add_method(new_fn).add_method(dot_fn).add_method(transpose_fn)
     return cls
@@ -73,6 +77,7 @@ def make_matrix_class() -> PyO3Class:
 # ---------------------------------------------------------------------------
 # Pattern 3 – enum-like class
 # ---------------------------------------------------------------------------
+
 
 def make_compression_enum() -> PyO3Class:
     """Return a ClassSpec modelling a Rust enum exposed as a Python class."""
@@ -95,6 +100,7 @@ def make_compression_enum() -> PyO3Class:
 # ---------------------------------------------------------------------------
 # Pattern 4 – iterator class
 # ---------------------------------------------------------------------------
+
 
 def make_chunk_iterator_class() -> PyO3Class:
     """Return a ClassSpec for a chunked iterator over a bytes buffer."""
@@ -120,6 +126,7 @@ def make_chunk_iterator_class() -> PyO3Class:
 # Pattern 5 – async function
 # ---------------------------------------------------------------------------
 
+
 def make_async_fetch_function() -> PyO3Function:
     """Return a FunctionSpec for a Tokio-backed async HTTP-fetch wrapper."""
     fn = PyO3Function(
@@ -137,6 +144,7 @@ def make_async_fetch_function() -> PyO3Function:
 # ---------------------------------------------------------------------------
 # Module assembly
 # ---------------------------------------------------------------------------
+
 
 def build_demo_module() -> PyO3Module:
     """Assemble all five patterns into one PyO3Module."""
@@ -157,6 +165,7 @@ def build_demo_module() -> PyO3Module:
 # ---------------------------------------------------------------------------
 # Code generators
 # ---------------------------------------------------------------------------
+
 
 def generate_cargo_toml(module: PyO3Module) -> str:
     """Render a minimal Cargo.toml for the module."""
@@ -200,7 +209,7 @@ def generate_rust_skeleton(module: PyO3Module) -> str:
         "use pyo3::prelude::*;",
         "",
         "/// PyO3 module entry point.",
-        f"#[pymodule]",
+        "#[pymodule]",
         f"fn {module.name}(m: &Bound<'_, PyModule>) -> PyResult<()> {{",
     ]
 
@@ -231,7 +240,9 @@ def generate_rust_skeleton(module: PyO3Module) -> str:
             f"pub struct {cls_obj.name} {{",
         ]
         for prop_name, prop_type in cls_obj.properties:
-            lines.append(f"    pub {prop_name}: {prop_type.value},  // Python {prop_type.value}")
+            lines.append(
+                f"    pub {prop_name}: {prop_type.value},  // Python {prop_type.value}"
+            )
         lines += ["}", "", "#[pymethods]", f"impl {cls_obj.name} {{"]
         for method in cls_obj.methods:
             m_params = ", ".join(f"{n}: {t.value}" for n, t in method.params)
@@ -248,6 +259,7 @@ def generate_rust_skeleton(module: PyO3Module) -> str:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     """Build the module and print generated artifacts."""

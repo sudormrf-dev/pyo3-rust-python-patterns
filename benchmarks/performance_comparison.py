@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BenchResult:
     """Timing result for one benchmark run."""
@@ -36,7 +37,7 @@ class BenchResult:
     name: str
     category: str
     python_ms: float
-    speedup_low: float   # conservative Rust/PyO3 multiplier
+    speedup_low: float  # conservative Rust/PyO3 multiplier
     speedup_high: float  # optimistic Rust/PyO3 multiplier
     iterations: int = 1
     notes: str = ""
@@ -80,6 +81,7 @@ class BenchSuite:
 # ---------------------------------------------------------------------------
 # Pure-Python implementations (measured)
 # ---------------------------------------------------------------------------
+
 
 def py_count_vowels(text: str) -> int:
     """Count ASCII vowels in a string."""
@@ -162,6 +164,7 @@ def py_flatten_nested(data: list[Any], depth: int = 2) -> list[Any]:
 # Timing harness
 # ---------------------------------------------------------------------------
 
+
 def _time_ms(fn: Callable[[], Any], warmup: int = 1, runs: int = 5) -> float:
     """Return median wall-clock milliseconds for ``fn()``."""
     for _ in range(warmup):
@@ -178,36 +181,43 @@ def _time_ms(fn: Callable[[], Any], warmup: int = 1, runs: int = 5) -> float:
 # Build benchmark suites
 # ---------------------------------------------------------------------------
 
+
 def bench_string_processing() -> BenchSuite:
     """String manipulation benchmarks."""
     suite = BenchSuite(category="String processing")
     corpus = " ".join(["hello", "world", "pyo3", "rust", "python"] * 2000)
     long_text = corpus * 4  # ~240 kB string
 
-    suite.add(BenchResult(
-        name="count_vowels",
-        category="String processing",
-        python_ms=_time_ms(lambda: py_count_vowels(long_text)),
-        speedup_low=8.0,
-        speedup_high=15.0,
-        notes="SIMD-friendly loop; Rust can use memchr or manual SIMD.",
-    ))
-    suite.add(BenchResult(
-        name="reverse_words",
-        category="String processing",
-        python_ms=_time_ms(lambda: py_reverse_words(corpus)),
-        speedup_low=6.0,
-        speedup_high=12.0,
-        notes="Allocation-heavy in Python; Rust can reuse a single Vec<u8>.",
-    ))
-    suite.add(BenchResult(
-        name="word_frequency",
-        category="String processing",
-        python_ms=_time_ms(lambda: py_word_frequency(corpus)),
-        speedup_low=5.0,
-        speedup_high=10.0,
-        notes="HashMap<&str, u32> in Rust; avoids Python dict boxing overhead.",
-    ))
+    suite.add(
+        BenchResult(
+            name="count_vowels",
+            category="String processing",
+            python_ms=_time_ms(lambda: py_count_vowels(long_text)),
+            speedup_low=8.0,
+            speedup_high=15.0,
+            notes="SIMD-friendly loop; Rust can use memchr or manual SIMD.",
+        )
+    )
+    suite.add(
+        BenchResult(
+            name="reverse_words",
+            category="String processing",
+            python_ms=_time_ms(lambda: py_reverse_words(corpus)),
+            speedup_low=6.0,
+            speedup_high=12.0,
+            notes="Allocation-heavy in Python; Rust can reuse a single Vec<u8>.",
+        )
+    )
+    suite.add(
+        BenchResult(
+            name="word_frequency",
+            category="String processing",
+            python_ms=_time_ms(lambda: py_word_frequency(corpus)),
+            speedup_low=5.0,
+            speedup_high=10.0,
+            notes="HashMap<&str, u32> in Rust; avoids Python dict boxing overhead.",
+        )
+    )
     return suite
 
 
@@ -215,51 +225,60 @@ def bench_numeric_computation() -> BenchSuite:
     """CPU-bound numeric benchmarks."""
     suite = BenchSuite(category="Numeric computation")
 
-    suite.add(BenchResult(
-        name="sum_squares_1M",
-        category="Numeric computation",
-        python_ms=_time_ms(lambda: py_sum_squares(1_000_000)),
-        speedup_low=20.0,
-        speedup_high=50.0,
-        notes="Pure float loop; Rust auto-vectorises with -O3.",
-    ))
-    suite.add(BenchResult(
-        name="count_primes_10k",
-        category="Numeric computation",
-        python_ms=_time_ms(lambda: py_count_primes(10_000)),
-        speedup_low=25.0,
-        speedup_high=50.0,
-        notes="Integer trial division; Rust integers are register-width.",
-    ))
+    suite.add(
+        BenchResult(
+            name="sum_squares_1M",
+            category="Numeric computation",
+            python_ms=_time_ms(lambda: py_sum_squares(1_000_000)),
+            speedup_low=20.0,
+            speedup_high=50.0,
+            notes="Pure float loop; Rust auto-vectorises with -O3.",
+        )
+    )
+    suite.add(
+        BenchResult(
+            name="count_primes_10k",
+            category="Numeric computation",
+            python_ms=_time_ms(lambda: py_count_primes(10_000)),
+            speedup_low=25.0,
+            speedup_high=50.0,
+            notes="Integer trial division; Rust integers are register-width.",
+        )
+    )
     return suite
 
 
 def bench_list_sorting() -> BenchSuite:
     """Sorting benchmarks."""
     import random
+
     rng = random.Random(42)
 
     suite = BenchSuite(category="List sorting")
 
     strings = [f"item_{rng.randint(0, 100_000):08d}" for _ in range(50_000)]
-    suite.add(BenchResult(
-        name="sort_50k_strings",
-        category="List sorting",
-        python_ms=_time_ms(lambda: py_sort_strings(strings[:])),
-        speedup_low=5.0,
-        speedup_high=10.0,
-        notes="Timsort vs Rust sort; Python GC overhead per comparison.",
-    ))
+    suite.add(
+        BenchResult(
+            name="sort_50k_strings",
+            category="List sorting",
+            python_ms=_time_ms(lambda: py_sort_strings(strings[:])),
+            speedup_low=5.0,
+            speedup_high=10.0,
+            notes="Timsort vs Rust sort; Python GC overhead per comparison.",
+        )
+    )
 
     pairs = [(rng.randint(0, 10_000), f"val_{i}") for i in range(30_000)]
-    suite.add(BenchResult(
-        name="sort_30k_tuples_by_key",
-        category="List sorting",
-        python_ms=_time_ms(lambda: py_sort_tuples(pairs[:])),
-        speedup_low=4.0,
-        speedup_high=8.0,
-        notes="Key extraction callback overhead eliminated in Rust.",
-    ))
+    suite.add(
+        BenchResult(
+            name="sort_30k_tuples_by_key",
+            category="List sorting",
+            python_ms=_time_ms(lambda: py_sort_tuples(pairs[:])),
+            speedup_low=4.0,
+            speedup_high=8.0,
+            notes="Key extraction callback overhead eliminated in Rust.",
+        )
+    )
     return suite
 
 
@@ -271,24 +290,28 @@ def bench_memory_intensive() -> BenchSuite:
     a = [[float(i * size + j) for j in range(size)] for i in range(size)]
     b = [[float(i + j) for j in range(size)] for i in range(size)]
 
-    suite.add(BenchResult(
-        name=f"matrix_multiply_{size}x{size}",
-        category="Memory-intensive",
-        python_ms=_time_ms(lambda: py_matrix_multiply(a, b), warmup=0, runs=3),
-        speedup_low=10.0,
-        speedup_high=30.0,
-        notes="Cache-friendly inner loop; Rust LLVM can autovectorise.",
-    ))
+    suite.add(
+        BenchResult(
+            name=f"matrix_multiply_{size}x{size}",
+            category="Memory-intensive",
+            python_ms=_time_ms(lambda: py_matrix_multiply(a, b), warmup=0, runs=3),
+            speedup_low=10.0,
+            speedup_high=30.0,
+            notes="Cache-friendly inner loop; Rust LLVM can autovectorise.",
+        )
+    )
 
     nested = [[list(range(20)) for _ in range(20)] for _ in range(50)]
-    suite.add(BenchResult(
-        name="flatten_nested_50x20x20",
-        category="Memory-intensive",
-        python_ms=_time_ms(lambda: py_flatten_nested(nested)),
-        speedup_low=8.0,
-        speedup_high=20.0,
-        notes="Many small allocations in Python; Rust pre-allocates with_capacity.",
-    ))
+    suite.add(
+        BenchResult(
+            name="flatten_nested_50x20x20",
+            category="Memory-intensive",
+            python_ms=_time_ms(lambda: py_flatten_nested(nested)),
+            speedup_low=8.0,
+            speedup_high=20.0,
+            notes="Many small allocations in Python; Rust pre-allocates with_capacity.",
+        )
+    )
     return suite
 
 
@@ -307,22 +330,24 @@ def _header() -> str:
 
 
 def _row(r: BenchResult) -> str:
-    return "  ".join([
-        f"{r.name:<{_COL_W[0]}}",
-        f"{r.python_ms:<{_COL_W[1]}.2f}",
-        f"{r.rust_low_ms:<{_COL_W[2]}.2f}",
-        f"{r.rust_high_ms:<{_COL_W[3]}.2f}",
-        f"{r.speedup_low:.0f}–{r.speedup_high:.0f}x",
-    ])
+    return "  ".join(
+        [
+            f"{r.name:<{_COL_W[0]}}",
+            f"{r.python_ms:<{_COL_W[1]}.2f}",
+            f"{r.rust_low_ms:<{_COL_W[2]}.2f}",
+            f"{r.rust_high_ms:<{_COL_W[3]}.2f}",
+            f"{r.speedup_low:.0f}–{r.speedup_high:.0f}x",
+        ]
+    )
 
 
 def print_suite(suite: BenchSuite) -> None:
     """Print a formatted table for one benchmark suite."""
-    print(f"\n{'='*72}")
+    print(f"\n{'=' * 72}")
     print(f"Category: {suite.category}")
     print(f"  Mean Python time : {suite.mean_python_ms():.2f} ms")
     print(f"  Mean speedup (mid): {suite.mean_speedup():.1f}x")
-    print(f"{'='*72}")
+    print(f"{'=' * 72}")
     print(_header())
     for r in suite.results:
         print(_row(r))
@@ -336,7 +361,7 @@ def print_summary(suites: list[BenchSuite]) -> None:
     print("Summary: Python-pure vs extrapolated PyO3/Rust speedups")
     print("=" * 72)
     print(f"  {'Category':<28} {'Mean Python ms':>15} {'Speedup range':>15}")
-    print(f"  {'-'*28} {'-'*15} {'-'*15}")
+    print(f"  {'-' * 28} {'-' * 15} {'-' * 15}")
     all_results: list[BenchResult] = []
     for s in suites:
         all_results.extend(s.results)
@@ -346,7 +371,9 @@ def print_summary(suites: list[BenchSuite]) -> None:
 
     overall_speedup = statistics.mean(r.speedup_mid for r in all_results)
     overall_py_ms = statistics.mean(r.python_ms for r in all_results)
-    print(f"\n  {'Overall average':<28} {overall_py_ms:>15.2f} {overall_speedup:>13.1f}x")
+    print(
+        f"\n  {'Overall average':<28} {overall_py_ms:>15.2f} {overall_speedup:>13.1f}x"
+    )
     print()
     print("  Note: Rust times are extrapolated, NOT measured.")
     print("        Actual speedup depends on PyO3 boundary overhead, data size,")
@@ -356,6 +383,7 @@ def print_summary(suites: list[BenchSuite]) -> None:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     """Run all benchmark suites and print reports."""
